@@ -1,8 +1,8 @@
 import sys
 import math
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
-from PySide6.QtCore import Qt, QTimer, QPoint
-from PySide6.QtGui import QPainter, QFont
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPainter, QFont, QColor
 
 class ClockWidget(QWidget):
     def __init__(self):
@@ -16,6 +16,10 @@ class ClockWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
+        # Рисуем фон с градиентом
+        gradient = QColor(240, 240, 240)
+        painter.fillRect(self.rect(), gradient)
+
         # Рисуем циферблат
         side = min(self.width(), self.height())
         painter.setViewport((self.width() - side) // 2, (self.height() - side) // 2, side, side)
@@ -26,12 +30,21 @@ class ClockWidget(QWidget):
         painter.setBrush(Qt.white)
         painter.drawEllipse(0, 0, 200, 200)
 
+        # Рисуем деления
+        for i in range(0, 60):
+            angle = 6 * i  # 6 градусов между делениями
+            length = 10 if i % 5 else 15  # Длинные деления для часов
+            painter.drawLine(100 + (90 - length) * math.sin(math.radians(angle)),
+                             100 - (90 - length) * math.cos(math.radians(angle)),
+                             100 + 90 * math.sin(math.radians(angle)),
+                             100 - 90 * math.cos(math.radians(angle)))
+
         # Рисуем цифры
         painter.setFont(QFont("Arial", 10))
         for i in range(1, 13):
             angle = 30 * i  # 30 градусов между цифрами
-            x = 100 + 80 * math.sin(math.radians(angle))
-            y = 100 - 80 * math.cos(math.radians(angle))
+            x = 100 + 70 * math.sin(math.radians(angle))
+            y = 100 - 70 * math.cos(math.radians(angle))
             painter.drawText(int(x) - 10, int(y) + 10, str(i))
 
         # Рисуем стрелки
@@ -43,7 +56,17 @@ class ClockWidget(QWidget):
         painter.save()
         painter.translate(100, 100)
         painter.rotate(angle)
-        painter.drawLine(0, 0, 0, -length)
+
+        # Устанавливаем стиль стрелки
+        if hand_type == 'hour':
+            painter.setBrush(Qt.black)
+            painter.setPen(Qt.black)
+            painter.drawLine(0, 0, 0, -length)  # Часовая стрелка
+        else:
+            painter.setBrush(Qt.blue)
+            painter.setPen(Qt.blue)
+            painter.drawLine(0, 0, 0, -length)  # Минутная стрелка
+
         painter.restore()
 
         # Проверка на выбор стрелки
@@ -109,9 +132,11 @@ class TimeInputApp(QWidget):
 
         self.clock = ClockWidget()
         self.label = QLabel("Выбранное время: 12:00")
+        self.button = QPushButton("Сбросить время")
 
         layout.addWidget(self.clock)
         layout.addWidget(self.label)
+        layout.addWidget(self.button)
 
         self.setLayout(layout)
 
@@ -120,8 +145,16 @@ class TimeInputApp(QWidget):
         self.timer.timeout.connect(self.update_time)
         self.timer.start(100)
 
+        # Подключение кнопки
+        self.button.clicked.connect(self.reset_time)
+
     def update_time(self):
         self.label.setText(f"Выбранное время: {self.clock.hour:02d}:{self.clock.minute:02d}")
+
+    def reset_time(self):
+        self.clock.hour = 12
+        self.clock.minute = 0
+        self.update_time()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
